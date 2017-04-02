@@ -1,6 +1,9 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.renderers import JSONRenderer
 from rest_framework import viewsets
+from rest_framework.parsers import JSONParser
 from .models import UserProfile, Board, List, Card
 from .serializers import UserProfileSerializer, BoardSerializer, ListSerializer
 
@@ -19,6 +22,20 @@ class BoardViewSet(viewsets.ModelViewSet):
     """
     queryset = Board.objects.all().order_by('title')
     serializer_class = BoardSerializer
+
+    @csrf_exempt
+    def board_edit(request):
+        if request.method == 'GET':
+            boards = Board.objects.all()
+            serializer = BoardSerializer(boards, many=True)
+            return JsonResponse(serializer.data, safe=False)
+        elif request.method == 'POST':
+            data = JSONParser().parse(request)
+            serializer = BoardSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=201)
+            return JsonResponse(serializer.errors, status=400)
 
 
 class ListViewSet(viewsets.ModelViewSet):
